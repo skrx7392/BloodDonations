@@ -23,5 +23,25 @@ namespace BloodDonations.Api.Models.AccountViewModels
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; }
+
+        [Required]
+        [DataType(DataType.Date)]
+        [Display(Name = "Date of Birth")]
+        public DateTime DOB { get; set; }
+
+        [Required]
+        public int BloodType { get; set; }
+
+        [Required]
+        public string Gender { get; set; }
+
+        [Required]
+        public string FirstName { get; set; }
+
+        [Required]
+        public string LastName { get; set; }
+
+        [Required]
+        public string PhoneNumber { get; set; }
     }
 }

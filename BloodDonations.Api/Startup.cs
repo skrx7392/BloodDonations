@@ -86,6 +86,7 @@ namespace BloodDonations.Api
                     name: "default",
                     template: "{controller=Home}/{action=Index}/{id?}");
             });
+            Models.SeedData.Initialize(app.ApplicationServices);
         }
     }
 }

@@ -15,6 +15,10 @@ namespace BloodDonations.Api.Data
         {
         }
 
+        public DbSet<DonorDetails> DonorDetails { get; set; }
+        public DbSet<BloodGroup> BloodGroups { get; set; }
+        public DbSet<UserDonationHistory> UserDonationsHistory { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

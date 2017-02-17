@@ -12,6 +12,19 @@ namespace BloodDonations.Api.Data.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "BloodGroups",
+                columns: table => new
+                {
+                    Id = table.Column<int>(nullable: false),
+                    BloodType = table.Column<string>(nullable: false),
+                    RhFactor = table.Column<bool>(nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BloodGroups", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
                 {
@@ -43,7 +56,7 @@ namespace BloodDonations.Api.Data.Migrations
                 name: "AspNetUsers",
                 columns: table => new
                 {
-                    Id = table.Column<string>(nullable: false),
+                    Id = table.Column<string>(nullable: false, maxLength: 50),
                     AccessFailedCount = table.Column<int>(nullable: false),
                     ConcurrencyStamp = table.Column<string>(nullable: true),
                     Email = table.Column<string>(maxLength: 256, nullable: true),
@@ -52,6 +65,7 @@ namespace BloodDonations.Api.Data.Migrations
                     LockoutEnd = table.Column<DateTimeOffset>(nullable: true),
                     NormalizedEmail = table.Column<string>(maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(maxLength: 256, nullable: true),
+                    Salt = table.Column<string>(nullable: false, maxLength: 256),
                     PasswordHash = table.Column<string>(nullable: true),
                     PhoneNumber = table.Column<string>(nullable: true),
                     PhoneNumberConfirmed = table.Column<bool>(nullable: false),
@@ -93,7 +107,7 @@ namespace BloodDonations.Api.Data.Migrations
                         .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
                     ClaimType = table.Column<string>(nullable: true),
                     ClaimValue = table.Column<string>(nullable: true),
-                    UserId = table.Column<string>(nullable: false)
+                    UserId = table.Column<string>(nullable: false, maxLength: 50)
                 },
                 constraints: table =>
                 {
@@ -113,7 +127,7 @@ namespace BloodDonations.Api.Data.Migrations
                     LoginProvider = table.Column<string>(nullable: false),
                     ProviderKey = table.Column<string>(nullable: false),
                     ProviderDisplayName = table.Column<string>(nullable: true),
-                    UserId = table.Column<string>(nullable: false)
+                    UserId = table.Column<string>(nullable: false, maxLength: 50)
                 },
                 constraints: table =>
                 {
@@ -130,7 +144,7 @@ namespace BloodDonations.Api.Data.Migrations
                 name: "AspNetUserRoles",
                 columns: table => new
                 {
-                    UserId = table.Column<string>(nullable: false),
+                    UserId = table.Column<string>(nullable: false, maxLength: 50),
                     RoleId = table.Column<string>(nullable: false)
                 },
                 constraints: table =>
@@ -149,6 +163,63 @@ namespace BloodDonations.Api.Data.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateTable(
+                name: "DonorDetails",
+                columns: table => new
+                {
+                    Id = table.Column<string>(nullable: false, maxLength: 50),
+                    FirstName = table.Column<string>(nullable: false),
+                    LastName = table.Column<string>(nullable: false),
+                    Gender = table.Column<string>(nullable: false),
+                    DOB = table.Column<DateTime>(nullable: false),
+                    BloodGroupId = table.Column<int>(nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DonorDetails", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DonorDetails_AspNetUsers_Id",
+                        column: x => x.Id,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_DonorDetails_BloodGroups_BloodGroupId",
+                        column: x => x.BloodGroupId,
+                        principalTable: "BloodGroups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserDonationsHistory",
+                columns: table => new
+                {
+                    Id = table.Column<int>(nullable: false),
+                    UserId = table.Column<string>(nullable: false, maxLength: 50),
+                    DonationDate = table.Column<DateTime>(nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserDonationsHistory", x => new { x.Id });
+                    table.ForeignKey(
+                        name: "FK_UserDonationsHistory_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "DonorDetailsBloodGroupIndex",
+                table: "DonorDetails",
+                column: "BloodGroupId");
+
+            migrationBuilder.CreateIndex(
+                name: "UserDonationsHistoryIndex",
+                table: "UserDonationsHistory",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "RoleNameIndex",
@@ -194,6 +265,12 @@ namespace BloodDonations.Api.Data.Migrations
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "BloodGroups");
+
+            migrationBuilder.DropTable(
+                name: "UserDonationsHistory");
+
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 

@@ -12,6 +12,8 @@ using Microsoft.Extensions.Options;
 using BloodDonations.Api.Models;
 using BloodDonations.Api.Models.AccountViewModels;
 using BloodDonations.Api.Services;
+using BloodDonations.Api.Data;
+using System.Security.Cryptography;
 
 namespace BloodDonations.Api.Controllers
 {
@@ -20,6 +22,7 @@ namespace BloodDonations.Api.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly ApplicationDbContext _applicationDbContext;
         private readonly IEmailSender _emailSender;
         private readonly ISmsSender _smsSender;
         private readonly ILogger _logger;
@@ -31,7 +34,8 @@ namespace BloodDonations.Api.Controllers
             IOptions<IdentityCookieOptions> identityCookieOptions,
             IEmailSender emailSender,
             ISmsSender smsSender,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            ApplicationDbContext applicationDbContext)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -39,6 +43,7 @@ namespace BloodDonations.Api.Controllers
             _emailSender = emailSender;
             _smsSender = smsSender;
             _logger = loggerFactory.CreateLogger<AccountController>();
+            _applicationDbContext = applicationDbContext;
         }
 
         //
@@ -66,7 +71,13 @@ namespace BloodDonations.Api.Controllers
             {
                 // This doesn't count login failures towards account lockout
                 // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-                var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: false);
+                var user = _applicationDbContext.Users.FirstOrDefault(p => p.Email == model.Email);
+                if (user == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                    return View(model);
+                }
+                var result = await _signInManager.PasswordSignInAsync(model.Email, string.Concat(user.Salt, model.Password), model.RememberMe, lockoutOnFailure: false);
                 if (result.Succeeded)
                 {
                     _logger.LogInformation(1, "User logged in.");
@@ -112,10 +123,16 @@ namespace BloodDonations.Api.Controllers
             ViewData["ReturnUrl"] = returnUrl;
             if (ModelState.IsValid)
             {
-                var user = new ApplicationUser { UserName = model.Email, Email = model.Email };
-                var result = await _userManager.CreateAsync(user, model.Password);
+                var user = new ApplicationUser();
+                populateUserInfo(model, user);
+                var result = await _userManager.CreateAsync(user, string.Concat(user.Salt, model.Password));
                 if (result.Succeeded)
                 {
+                    var donorDetails = new DonorDetails();
+                    var userId = _applicationDbContext.Users.FirstOrDefault(p => p.Email == model.Email).Id;
+                    populateDonorDetails(donorDetails, model, userId);
+                    _applicationDbContext.DonorDetails.Add(donorDetails);
+                    _applicationDbContext.SaveChanges();
                     // For more information on how to enable account confirmation and password reset please visit http://go.microsoft.com/fwlink/?LinkID=532713
                     // Send an email with this link
                     //var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -131,6 +148,35 @@ namespace BloodDonations.Api.Controllers
 
             // If we got this far, something failed, redisplay form
             return View(model);
+        }
+
+        private void populateDonorDetails(DonorDetails donorDetails, RegisterViewModel model, string userId)
+        {
+            donorDetails.Id = userId;
+            donorDetails.FirstName = model.FirstName;
+            donorDetails.LastName = model.LastName;
+            donorDetails.Gender = model.Gender;
+            donorDetails.DOB = model.DOB;
+            donorDetails.BloodId = model.BloodType;
+        }
+
+        private void populateUserInfo(RegisterViewModel model, ApplicationUser user)
+        {
+            user.Email = model.Email;
+            user.Salt = CreateSalt();
+            user.PhoneNumber = model.PhoneNumber;
+        }
+
+        private string CreateSalt()
+        {
+            var salt = string.Empty;
+            using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
+            {
+                byte[] data = new byte[4];
+                rng.GetBytes(data);
+                salt = BitConverter.ToString(data);
+                return salt;
+            }
         }
 
         //
